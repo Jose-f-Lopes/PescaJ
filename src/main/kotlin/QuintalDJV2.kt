@@ -64,7 +64,7 @@ class QuintalDJV2 {
     }
 
     fun methodSelected(model:BodyDeclaration<*>){
-        println(viewer.currentWorkSpace())
+        //println(viewer.currentWorkSpace())
         viewer.currentWorkSpace()?.addMethod(model)
     }
 }
