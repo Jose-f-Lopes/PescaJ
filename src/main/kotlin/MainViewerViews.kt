@@ -1,13 +1,15 @@
 import com.github.javaparser.ast.body.BodyDeclaration
+import com.github.javaparser.ast.body.MethodDeclaration
 import org.eclipse.swt.SWT
-import org.eclipse.swt.custom.CLabel
 import org.eclipse.swt.custom.CTabFolder
 import org.eclipse.swt.custom.CTabItem
-import org.eclipse.swt.custom.SashForm
 import org.eclipse.swt.events.MouseEvent
+import org.eclipse.swt.layout.FillLayout
+import org.eclipse.swt.layout.GridLayout
 import org.eclipse.swt.widgets.*
+import pt.iscte.javardise.external.*
+import pt.iscte.javardise.widgets.MethodWidget
 import java.awt.Point
-import java.awt.event.MouseListener
 
 
 internal class WorkSpaceViewer(parent:Composite):customComposite{
@@ -23,6 +25,8 @@ internal class WorkSpaceViewer(parent:Composite):customComposite{
 
     init {
         tabFolder = CTabFolder(parent, SWT.BORDER)
+        //val layout=FillLayout()
+        //tabFolder.layout=layout
         addTab= CTabItem(tabFolder,SWT.NULL)
         addTab.text="+"
 
@@ -58,6 +62,8 @@ internal class WorkSpace(parent:WorkSpaceViewer,counter:Int):customComposite{
 
     private val tabItem:CTabItem
     private val workSpace:Composite
+    private val workSpaceModel:WorkSpaceModel
+
     override fun getComposite(): Composite {
        return  workSpace
     }
@@ -65,23 +71,38 @@ internal class WorkSpace(parent:WorkSpaceViewer,counter:Int):customComposite{
         return tabItem
     }
     init {
+        workSpaceModel=WorkSpaceModel()
         tabItem = CTabItem(parent.getComposite() as CTabFolder, SWT.NULL or SWT.CLOSE)
         tabItem.text = "WorkSpace $counter"
         tabItem.addDisposeListener {
             parent.removeFromRegister(this)
         }
 
-        workSpace = SashForm(parent.getComposite(),SWT.BORDER)
+        workSpace = Composite(parent.getComposite(),SWT.BORDER)
+        val gridLayout = GridLayout()
+        gridLayout.numColumns = 1
+        workSpace.layout = gridLayout
+
         tabItem.control = workSpace
         parent.registerWorkSpace(this)
 
     }
     fun addMethod(model:BodyDeclaration<*>){
-        println(model.toString())
-        val text=Text(workSpace,SWT.BORDER)
-        text.text=model.toString()
-        workSpace.pack()
+        workSpaceModel.addMethod(model)
+        //println(model.toString())
+        createShell(workSpace, model as MethodDeclaration,true)
+    }
 
+    private fun createShell(parent:Composite, model: MethodDeclaration, readonly: Boolean){
+        val methodWidget = parent.column {
+            layout = FillLayout()
+            val w = scrollable {
+                MethodWidget(it, model, SWT.BORDER)
+            }
+            w.enabled = readonly
+
+        }
+        // add dispose listener
     }
 
 }
