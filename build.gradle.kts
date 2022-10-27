@@ -23,12 +23,11 @@ repositories {
 dependencies {
     testImplementation(kotlin("test"))
 
-
     implementation("org.eclipse.platform:org.eclipse.core.runtime:3.25.0")
-    implementation(files("swt-module.jar"))
+    implementation(files("libs/swt.jar"))
 
     implementation("com.github.javaparser:javaparser-symbol-solver-core:3.24.4")
-    implementation (files("C:\\Users\\jose1\\Desktop\\Quintal^DjRessources\\javardiseJP-0.1.jar"))
+    implementation (files("libs/javardiseJP-0.1.jar"))
 }
 
 

@@ -49,7 +49,7 @@ class QuintalDJV2 {
         viewer=WorkSpaceViewer(mainPanel)
 
 
-        mainPanel.weights= listOf<Int>(1,4).toIntArray()
+        mainPanel.setWeights(*listOf<Int>(1,4).toIntArray())
 
 
     }

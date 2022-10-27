@@ -8,7 +8,7 @@ import org.eclipse.swt.layout.FillLayout
 import org.eclipse.swt.layout.GridLayout
 import org.eclipse.swt.widgets.*
 import pt.iscte.javardise.external.*
-import pt.iscte.javardise.widgets.MethodWidget
+import pt.iscte.javardise.widgets.members.MethodWidget
 import java.awt.Point
 
 
