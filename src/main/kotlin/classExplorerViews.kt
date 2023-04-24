@@ -1,18 +1,16 @@
 import com.github.javaparser.ast.body.BodyDeclaration
 import com.github.javaparser.ast.body.TypeDeclaration
 import org.eclipse.swt.SWT
-import org.eclipse.swt.custom.SashForm
 import org.eclipse.swt.events.MouseEvent
 import org.eclipse.swt.events.MouseListener
-import org.eclipse.swt.events.SelectionAdapter
 import org.eclipse.swt.widgets.*
-import java.awt.Point
 
-interface customComposite{
+interface CustomComposite{
     fun getComposite():Composite
+
 }
 
-internal class listView(model:FileManager,parent:Composite,controler:QuintalDJV2):customComposite,listElement,IObservable<listView.listEntityEvent> {
+internal class listView(model:FileManager,parent:Composite,controler:QuintalDJV2):CustomComposite,listElement,IObservable<listView.listEntityEvent> {
 
     val tree:Composite
     private val root:TreeItem
@@ -120,7 +118,7 @@ class listTypeElement(type:TypeDeclaration<*>,val parent:listElement):listElemen
 
 }
 
-class listMethodElement(val body:BodyDeclaration<*>,val parent:listElement):listElement{
+class listMethodElement(val body:BodyDeclaration<*>,val parent:listElement):listElement {
     val treeItem:TreeItem
     override fun getparent(): TreeItem? {
         return parent.getTree()

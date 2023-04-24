@@ -45,7 +45,7 @@ private fun createShell(display: Display, model: MethodDeclaration, readonly: Bo
     val methodWidget = shell.column {
         layout = FillLayout()
         val w = scrollable {
-            MethodWidget(it, model, SWT.BORDER)
+            MethodWidget(it, model)
         }
         w.enabled = readonly
         grid(2) {

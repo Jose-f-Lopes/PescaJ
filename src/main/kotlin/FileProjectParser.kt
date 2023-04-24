@@ -1,12 +1,15 @@
 import com.github.javaparser.*
 import com.github.javaparser.ast.CompilationUnit
+import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
+import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
+import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver
 import java.io.File
 import java.io.IOException
 import java.nio.file.*
 import java.nio.file.StandardWatchEventKinds.*
 
 
-fun parserFromFile(path:String,fileManager:FileManager):List<CompilationUnit>{
+fun parserFromFile(path:String,fileManager:FileManager):Pair<List<CompilationUnit>,CombinedTypeSolver>{
     val list= mutableListOf<CompilationUnit>()
 
     val file=File(path)
@@ -24,10 +27,18 @@ fun parserFromFile(path:String,fileManager:FileManager):List<CompilationUnit>{
         println(e.message)
         throw e
     }
-
     file.walk(FileWalkDirection.TOP_DOWN).filter { it.path.endsWith(".java") }.forEach { list.add(StaticJavaParser.parse(it)) }
     println(list.size.toString()+" java files")
-    return list
+    return Pair(list,buildSolver(file))
+}
+
+private fun buildSolver(proj:File):CombinedTypeSolver{
+    val solver = CombinedTypeSolver()
+    solver.add(ReflectionTypeSolver())
+    proj.walkTopDown().filter { (it.listFiles()?.filter { it.name.endsWith(".java") })?.isNotEmpty()?:false}.forEach {
+        solver.add(JavaParserTypeSolver(it))
+    }
+    return solver
 }
 
 class FileWatcher(val watcher:WatchService,val fileManager: FileManager,val path:String): Runnable{
