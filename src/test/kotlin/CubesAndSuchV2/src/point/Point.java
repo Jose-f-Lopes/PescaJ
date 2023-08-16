@@ -1,0 +1,91 @@
+//package point;
+
+import static java.lang.Math.pow;
+import static java.lang.Math.sqrt;
+
+
+/** 
+ * this class represents a point in the cartesian coordinate system
+ * @author jose1
+ */
+public class Point {
+
+    private double x;
+    private double y;
+
+	/**
+	* contructor
+	*
+	* @param  x X coordinte of the point
+	* @param  y Y coordinte of the point
+	* 
+	*/
+    public Point(double x, double y){
+        this.x=x;
+        this.y=y;
+    }
+
+	/**
+	* Returns the X coordinate of the point
+	* @return	X coordinate of the point
+	*/
+    public double getX(){
+        return x;
+    }
+
+	/**
+	* Returns the Y coordinate of the point
+	* @return	Y coordinate of the point
+	*/
+    public double getY(){
+        return y;
+    }
+
+	/**
+	* Returns a double that is \\the euclidean distance between two given points 
+	* <p>
+	* Lorem ipsum dolor sit amet, consectetur adipiscing elit
+	* Praesent ac feugiat turpis, nec lobortis velit.
+	* Suspendisse ut metus auctor, fermentum diam sit amet, condimentum dui.
+	* Sed convallis tristique diam ac elementum. Quisque et eros at tortor luctus egestas.
+	*
+	* @param  point a point to calculate distance to
+	* @return      distance between points as a double
+	*/
+    public double distanceToPoint(Point point){
+        return sqrt(pow((getX()-point.getX()),2)+pow((getY()-point.getY()),2));
+    }
+	
+	
+	/**
+	* Calculates if a point is within a certain distance of another point
+	* <p>
+	* Returns true if points are delta distance or less between eachother,
+	* returns false otherwise
+	* please ignore the {@link #getY() getY} thing
+	*
+	* @param  point a point to calculate distance from
+	* @param  delta radius of acceptable proximity of the two points
+	* @return      	if the two points are within delta distance of eachother
+	* @see 			distanceToPoint
+	*/
+    public boolean isWithinDelta(Point point,Double delta){
+        return distanceToPoint(point)<=delta;
+    }
+
+	/**
+	* ToString method of point, returns the point in a string format
+	*
+	* @return Returns the point as a string in to format "X,Y"
+	*/
+    @Override
+    public String toString(){
+        return x+","+y;
+    }
+	
+	private boolean isFirstQuadrant(){
+		return x > 0 && y > 0;
+	}
+	
+
+}

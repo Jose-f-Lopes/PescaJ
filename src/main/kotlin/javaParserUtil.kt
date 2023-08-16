@@ -1,62 +1,109 @@
 import com.github.javaparser.ast.body.BodyDeclaration
+import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
 import com.github.javaparser.ast.body.MethodDeclaration
-import com.github.javaparser.ast.expr.BinaryExpr
 import com.github.javaparser.ast.expr.MethodCallExpr
-import com.github.javaparser.ast.visitor.GenericVisitor
+import com.github.javaparser.resolution.UnsolvedSymbolException
+import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade
+import com.github.javaparser.symbolsolver.javaparsermodel.declarations.JavaParserMethodDeclaration
+import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
+import pt.iscte.javardise.external.getOrNull
+import java.lang.RuntimeException
 
 class javaParserUtil {
 
 
     companion object{
-        //TODO fazer isto funcionar para os ifs e etc (recurssivo)
-       fun contains(method:MethodDeclaration,contained:BodyDeclaration<*>):Boolean{
 
-           if(!contained.isMethodDeclaration){
-               return false
-           }else{
-               var contains=false
-               val containedMethod=contained.asMethodDeclaration()
-               //println("contained: "+containedMethod.name)
-               method.body.get().statements.forEach {
-                   if(it.isExpressionStmt){
-                       if(it.asExpressionStmt().expression.isMethodCallExpr){
-                           val expr=it.asExpressionStmt().expression.asMethodCallExpr()
-                           contains= contains || compareMethod(expr,containedMethod)
-                       }
-                       else if (it.asExpressionStmt().expression.isAssignExpr){
-                           val expr= it.asExpressionStmt().expression.asAssignExpr().value
-                           if(expr.isMethodCallExpr){
-                                contains= contains || compareMethod(expr.asMethodCallExpr(),containedMethod)
-                           }
-                           else if(expr.isBinaryExpr){
-                               contains= contains || (binaryAux(expr.asBinaryExpr(),containedMethod))
-                           }
-                       }
-                   }
-               }
-               return contains
-           }
-       }
+        //BUG sometimes this doesn't work if the file has a package header (?????)
+        fun contains(method: MethodDeclaration,contained: BodyDeclaration<*>,solver:CombinedTypeSolver):Boolean{
+            var contains=false
 
-        private fun binaryAux(bin:BinaryExpr,method:MethodDeclaration):Boolean{
-            val left=bin.asBinaryExpr().left
-            val right=bin.asBinaryExpr().right
-            if(left.isMethodCallExpr){
-                if(compareMethod(left.asMethodCallExpr(),method)){
+
+            method.findAll(MethodCallExpr::class.java).forEach {
+                try {
+                    val jpf = JavaParserFacade.get(solver).solve(it)
+                    //println(jpf.correspondingDeclaration.javaClass)
+                    if (jpf.isSolved && jpf.correspondingDeclaration is JavaParserMethodDeclaration) {
+                        val methodDecl = (jpf.correspondingDeclaration as JavaParserMethodDeclaration)
+                        val methodDeclNode = methodDecl.wrappedNode
+                        if(methodDeclNode==contained){
+                            contains=true
+                        }
+                        //val calledMethodclassOrInterface = methodDeclNode.parentNode.get() as TypeDeclaration<*>
+                    }
+                } catch (e: UnsolvedSymbolException) {
+                    println("contains catch 1")
+                    println(e.message)
+                } catch (e2: RuntimeException) {
+                    println("contains catch 2")
+                    println(e2.message)
+                }
+            }
+            return contains
+        }
+
+        fun expressionToDeclaration(expr:MethodCallExpr,solver: CombinedTypeSolver):MethodDeclaration?{
+            try {
+                val jpf = JavaParserFacade.get(solver).solve(expr)
+                if (jpf.isSolved && jpf.correspondingDeclaration is JavaParserMethodDeclaration) {
+                    val methodDecl = (jpf.correspondingDeclaration as JavaParserMethodDeclaration)
+                    return methodDecl.wrappedNode
+                }
+            } catch (e: UnsolvedSymbolException) {
+                println(e.message)
+            } catch (e2: RuntimeException) {
+                println(e2.message)
+            }
+            return null
+        }
+
+        fun isCalledInClass(method:MethodDeclaration,clazz:ClassOrInterfaceDeclaration,solver:CombinedTypeSolver):Boolean{
+            clazz.methods.forEach {
+                if (contains(it,method,solver)){
                     return true
                 }
-            }else if(left.isBinaryExpr){ return binaryAux(left.asBinaryExpr(),method)}
-
-            if(right.isMethodCallExpr){
-                if(compareMethod(right.asMethodCallExpr(),method)){
-                    return true
-                }
-            }else if(right.isBinaryExpr){ return binaryAux(right.asBinaryExpr(),method)}
+            }
             return false
         }
 
-        private fun compareMethod(methodCall:MethodCallExpr,method:MethodDeclaration):Boolean{
-            return(methodCall.name==method.name)
+        fun allCalledMethods(method:MethodDeclaration,solver:CombinedTypeSolver):List<MethodDeclaration>{
+            val result= mutableListOf<MethodDeclaration>()
+            method.findAll(MethodCallExpr::class.java).forEach {
+                try {
+                    val jpf = JavaParserFacade.get(solver).solve(it)
+                    //println(jpf.correspondingDeclaration.javaClass)
+                    if (jpf.isSolved && jpf.correspondingDeclaration is JavaParserMethodDeclaration) {
+                        val methodDecl = (jpf.correspondingDeclaration as JavaParserMethodDeclaration)
+                        val methodDeclNode = methodDecl.wrappedNode
+                        if(!result.contains(methodDeclNode)){
+                            result.add(methodDeclNode)
+                        }
+                        //val calledMethodclassOrInterface = methodDeclNode.parentNode.get() as TypeDeclaration<*>
+                    }
+                } catch (e: UnsolvedSymbolException) {
+                    println(e.message)
+                } catch (e2: RuntimeException) {
+                    println(e2.message)
+                }
+            }
+
+            return result
+        }
+
+        fun nonDocumentedAPI(clazz:ClassOrInterfaceDeclaration):List<MethodDeclaration>{
+            val result= mutableListOf<MethodDeclaration>()
+            clazz.methods.filter{it.isPublic}.forEach {
+                it.javadoc.getOrNull?:result.add(it)
+            }
+            return result
+        }
+
+        fun nonDocumentedPrivate(clazz:ClassOrInterfaceDeclaration):List<MethodDeclaration>{
+            val result= mutableListOf<MethodDeclaration>()
+            clazz.methods.filter{!it.isPublic}.forEach {
+                it.javadoc.getOrNull?:result.add(it)
+            }
+            return result
         }
     }
 }
