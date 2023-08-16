@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.6.0"
+    kotlin("jvm") version "1.8.0"
 
 }
 
@@ -25,10 +25,26 @@ dependencies {
 
     implementation("org.eclipse.platform:org.eclipse.core.runtime:3.25.0")
     implementation(files("libs/swt.jar"))
-
-    implementation("com.github.javaparser:javaparser-symbol-solver-core:3.24.4")
-    implementation (files("libs/javardise-0.1.jar"))
     implementation(kotlin("reflect"))
+    implementation("com.github.javaparser:javaparser-symbol-solver-core:3.24.8")
+    implementation(files("libs/javardise-1.0.2.jar"))
+
+    // https://mvnrepository.com/artifact/org.eclipse.platform/org.eclipse.jface
+    implementation("org.eclipse.platform:org.eclipse.jface:3.13.2")
+
+}
+
+configurations.all {
+    resolutionStrategy {
+        eachDependency {
+            if (this.requested.name.contains("\${osgi.platform}")) {
+                this.useTarget(
+                    this.requested.toString()
+                        .replace("\${osgi.platform}", "win32.win32.x86_64")
+                )
+            }
+        }
+    }
 }
 
 

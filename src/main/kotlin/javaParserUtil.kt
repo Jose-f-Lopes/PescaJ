@@ -6,6 +6,7 @@ import com.github.javaparser.resolution.UnsolvedSymbolException
 import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade
 import com.github.javaparser.symbolsolver.javaparsermodel.declarations.JavaParserMethodDeclaration
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
+import pt.iscte.javardise.external.getOrNull
 import java.lang.RuntimeException
 
 class javaParserUtil {
@@ -17,8 +18,8 @@ class javaParserUtil {
         fun contains(method: MethodDeclaration,contained: BodyDeclaration<*>,solver:CombinedTypeSolver):Boolean{
             var contains=false
 
+
             method.findAll(MethodCallExpr::class.java).forEach {
-                //println(it)
                 try {
                     val jpf = JavaParserFacade.get(solver).solve(it)
                     //println(jpf.correspondingDeclaration.javaClass)
@@ -31,8 +32,10 @@ class javaParserUtil {
                         //val calledMethodclassOrInterface = methodDeclNode.parentNode.get() as TypeDeclaration<*>
                     }
                 } catch (e: UnsolvedSymbolException) {
+                    println("contains catch 1")
                     println(e.message)
                 } catch (e2: RuntimeException) {
+                    println("contains catch 2")
                     println(e2.message)
                 }
             }
@@ -87,5 +90,20 @@ class javaParserUtil {
             return result
         }
 
+        fun nonDocumentedAPI(clazz:ClassOrInterfaceDeclaration):List<MethodDeclaration>{
+            val result= mutableListOf<MethodDeclaration>()
+            clazz.methods.filter{it.isPublic}.forEach {
+                it.javadoc.getOrNull?:result.add(it)
+            }
+            return result
+        }
+
+        fun nonDocumentedPrivate(clazz:ClassOrInterfaceDeclaration):List<MethodDeclaration>{
+            val result= mutableListOf<MethodDeclaration>()
+            clazz.methods.filter{!it.isPublic}.forEach {
+                it.javadoc.getOrNull?:result.add(it)
+            }
+            return result
+        }
     }
 }

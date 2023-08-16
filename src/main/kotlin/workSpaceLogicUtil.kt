@@ -98,6 +98,27 @@ internal fun WorkSpaceModel.contained(methodToFind:MethodDeclaration,solver:Comb
         }
     }
     model.accept(visitor)
+    println("is called: "+ visitor.isCalled)
+    println("calling: "+visitor.callingMethod?.thisMethod?.nameAsString)
+    return Pair(visitor.isCalled,visitor.callingMethod)
+}
+
+internal fun WorkSpaceModel.WorkSpaceClass.contained(methodToFind:MethodDeclaration,solver:CombinedTypeSolver):Pair<Boolean,WorkSpaceModel.WorkSpaceMethod?>{
+    val model=this
+    val visitor=object:Visitor{
+        var isCalled=false
+        var callingMethod:WorkSpaceModel.WorkSpaceMethod?=null
+
+        override fun visit(m: WorkSpaceModel.WorkSpaceMethod): Boolean {
+            if (javaParserUtil.contains(m.thisMethod,methodToFind,solver)){
+                isCalled=true
+                callingMethod=m
+                return false
+            }
+            return true
+        }
+    }
+    model.accept(visitor)
     return Pair(visitor.isCalled,visitor.callingMethod)
 }
 
@@ -147,24 +168,60 @@ internal fun WorkSpaceModel.WorkSpaceMethod.inClassDepth():Int{
     return visitor.result
 }
 
-internal fun WorkSpaceModel.WorkSpaceClass.isCalling(method:MethodDeclaration,solver:CombinedTypeSolver):Pair<Boolean,WorkSpaceModel.WorkSpaceMethod?>{
+internal fun WorkSpaceModel.WorkSpaceClass.methodOrderByLevel(): MutableList<MutableList<WorkSpaceModel.WorkSpaceMethod>>{
+    val clazz=this
+    val visitor=object :Visitor{
+        var depth=0
+        var result= mutableListOf<MutableList<WorkSpaceModel.WorkSpaceMethod>>()
+
+        override fun visit(m: WorkSpaceModel.WorkSpaceMethod): Boolean {
+            val realDepth = m.inClassDepth()
+            depth++
+            if (realDepth == depth) {
+                val level = result.getOrNull(depth - 1)
+                if (level == null) {
+                    val newLevel = mutableListOf<WorkSpaceModel.WorkSpaceMethod>()
+                    newLevel.add(m)
+                    result.add(newLevel)
+                } else {
+                    level.add(m)
+                }
+            }
+            return true
+        }
+
+        override fun endvisit(m: WorkSpaceModel.WorkSpaceMethod) {
+            depth--
+        }
+    }
+
+    clazz.accept(visitor)
+    return visitor.result
+}
+
+internal fun WorkSpaceModel.WorkSpaceClass.isCalling(method:MethodDeclaration,solver:CombinedTypeSolver):Pair<Boolean,List<WorkSpaceModel.WorkSpaceMethod>>{
     val clazz=this
     val visitor=object :Visitor{
 
         val calledMethods=javaParserUtil.allCalledMethods(method,solver)
         var isCalling=false
-        var calling:WorkSpaceModel.WorkSpaceMethod?=null
+        var calling= mutableListOf<WorkSpaceModel.WorkSpaceMethod>()
 
         override fun visit(m: WorkSpaceModel.WorkSpaceMethod): Boolean {
-            if(calledMethods.contains(m.thisMethod) and !isCalling){
+            if(calledMethods.contains(m.thisMethod)){
                 isCalling=true
-                calling=m
+                calling.add(m)
             }
             return false
         }
     }
     clazz.accept(visitor)
     return Pair(visitor.isCalling,visitor.calling)
+}
+
+internal fun WorkSpaceModel.WorkSpaceClass.methodInDepth(depth:Int):List<WorkSpaceModel.WorkSpaceMethod>{
+    val clazz=this
+    return this.containedMethods.filter { it.inClassDepth()==depth }
 
 }
 

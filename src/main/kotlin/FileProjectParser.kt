@@ -1,5 +1,8 @@
 import com.github.javaparser.*
 import com.github.javaparser.ast.CompilationUnit
+import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
+import com.github.javaparser.ast.body.TypeDeclaration
+import com.github.javaparser.ast.nodeTypes.NodeWithJavadoc
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver
@@ -7,10 +10,12 @@ import java.io.File
 import java.io.IOException
 import java.nio.file.*
 import java.nio.file.StandardWatchEventKinds.*
+import javax.xml.stream.events.Comment
+import pt.iscte.javardise.external.*
 
 
-fun parserFromFile(path:String,fileManager:FileManager):Pair<List<CompilationUnit>,CombinedTypeSolver>{
-    val list= mutableListOf<CompilationUnit>()
+internal fun parserFromFile(path:String,fileManager:FileManager):Pair<List<Pckg>,CombinedTypeSolver>{
+    val list= mutableListOf<Pckg>()
 
     val file=File(path)
     try {
@@ -27,7 +32,17 @@ fun parserFromFile(path:String,fileManager:FileManager):Pair<List<CompilationUni
         println(e.message)
         throw e
     }
-    file.walk(FileWalkDirection.TOP_DOWN).filter { it.path.endsWith(".java") }.forEach { list.add(StaticJavaParser.parse(it)) }
+    file.walk(FileWalkDirection.TOP_DOWN).forEach {file->
+        file.listFiles()?.let {
+            if (it.filter { it.name.endsWith(".java") }.isNotEmpty()) {
+                val newpckg=Pckg(file)
+                if (newpckg.javaClasses.isNotEmpty()){
+                    list.add(newpckg)
+                }
+            }
+        }
+    }
+
     println(list.size.toString()+" java files")
     return Pair(list,buildSolver(file))
 }
@@ -36,12 +51,13 @@ private fun buildSolver(proj:File):CombinedTypeSolver{
     val solver = CombinedTypeSolver()
     solver.add(ReflectionTypeSolver())
     proj.walkTopDown().filter { (it.listFiles()?.filter { it.name.endsWith(".java") })?.isNotEmpty()?:false}.forEach {
+
         solver.add(JavaParserTypeSolver(it))
     }
     return solver
 }
 
-class FileWatcher(val watcher:WatchService,val fileManager: FileManager,val path:String): Runnable{
+internal class FileWatcher(val watcher:WatchService,val fileManager: FileManager,val path:String): Runnable{
     override fun run() {
         while (true) {
             val key: WatchKey
@@ -69,7 +85,7 @@ class FileWatcher(val watcher:WatchService,val fileManager: FileManager,val path
                 val filename = ev.context().toString()
                 if(kind== ENTRY_CREATE){
                     if(filename.endsWith(".java")){
-                        fileManager.addJavaFile(path+"\\"+filename)
+                        //fileManager.addJavaFile(path+"\\"+filename)
                     }
                 }else if (kind== ENTRY_DELETE){
                     println(filename)
@@ -89,5 +105,44 @@ class FileWatcher(val watcher:WatchService,val fileManager: FileManager,val path
                 break
             }
         }
+    }
+}
+
+class Pckg(pckg:File){
+    val documentation:File?
+    val docComUnit:CompilationUnit?
+    val javaClasses= mutableListOf<CompilationUnit>()
+    val name:String
+
+    init {
+        pckg.listFiles()?.let {
+            it.filter { it.name.endsWith(".java") }.forEach {
+                //javaClasses.add(StaticJavaParser.parse(it))
+                javaClasses.add(loadCompilationUnit(it))
+            }
+        }
+        name=pckg.nameWithoutExtension
+        documentation=pckg.listFiles()?.firstOrNull{it.name=="package-info.java"}
+        if (documentation!=null){
+            docComUnit=StaticJavaParser.parse(documentation)
+        }else{
+            docComUnit=null
+        }
+        //TODO
+        //println(StaticJavaParser.parse(documentation).comment.getOrNull.toString())
+    }
+
+    fun getTypeDeclaration(): MutableList<TypeDeclaration<*>> {
+        val temp= mutableListOf<TypeDeclaration<*>>()
+        javaClasses.forEach {
+            it.types.forEach {
+                temp.add(it)
+            }
+        }
+        return temp
+    }
+
+    fun getDocumentation():com.github.javaparser.ast.comments.Comment?{
+        return docComUnit?.comment?.getOrNull
     }
 }

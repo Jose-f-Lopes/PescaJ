@@ -1,13 +1,11 @@
-import com.github.javaparser.ast.body.BodyDeclaration
-import com.github.javaparser.ast.body.MethodDeclaration
 import org.eclipse.swt.SWT
 import org.eclipse.swt.custom.SashForm
 import org.eclipse.swt.events.SelectionAdapter
 import org.eclipse.swt.events.SelectionEvent
 import org.eclipse.swt.events.SelectionListener
+import org.eclipse.swt.graphics.Image
 import org.eclipse.swt.layout.*
 import org.eclipse.swt.widgets.*
-import java.lang.IllegalArgumentException
 import kotlin.reflect.KClass
 
 
@@ -22,23 +20,17 @@ class QuintalDJV2 {
     val shell = Shell(display)
     private val model:FileManager
     internal val viewer:WorkSpaceViewerManager
-    val javardiseToggle:Button?
-    val allowDuplicates:Button?
     val workSpaceMenu:Menu
+    private val list:listView
     init {
-        shell.text = "QuintalDJ"
-        val layout= GridLayout()
-        layout.numColumns=1
-        shell.layout =layout
+        shell.text = "Pesca-J"
+        shell.layout=FillLayout()
+        shell.image= Image(display,"ImagesAndIcons\\icon.png")
 
 
         // nao esquecer layouts nos paineis (caso contrario nao se ve nada)
 
 
-        val buttonBar=Composite(shell,SWT.PUSH or SWT.BORDER )
-        val gridData=GridData(GridData.FILL_HORIZONTAL)
-        buttonBar.layoutData=gridData
-        buttonBar.layout=RowLayout()
 
         val menuBar= Menu(shell,SWT.BAR)
         val fileMenuHeader=MenuItem(menuBar,SWT.CASCADE)
@@ -57,66 +49,74 @@ class QuintalDJV2 {
 
         shell.menuBar=menuBar
 
-        val mainPanel=SashForm(shell, SWT.HORIZONTAL or SWT.BORDER)
+        val holder=Composite(shell,SWT.NONE)
+        holder.layout=GridLayout()
+
+
+
+        val mainPanel=SashForm(holder, SWT.HORIZONTAL)
         mainPanel.layoutData=GridData(GridData.FILL_BOTH)
+        mainPanel.layout=GridLayout()
+        val leftSection=Composite(mainPanel,SWT.NONE or SWT.BORDER)
+        val layout=GridLayout()
+        leftSection.layout=layout
+        val searchBar=SearchBar(leftSection)
+        searchBar.myComposite.layoutData=GridData(GridData.FILL_HORIZONTAL)
 
         model=FileManager()
         val solver=model.solver
-        val list=listView(model,mainPanel,this)
-        viewer=WorkSpaceViewerManager(mainPanel,shell,this)
+        list=listView(model,leftSection)
+        list.getComposite().layoutData=GridData(GridData.FILL_BOTH)
 
-        val debugButton=Button(buttonBar,SWT.BORDER)
+        searchBar.addObserver { searchEvent,searchString,filteredOut ->
+            if (searchEvent==SearchBar.searchEvent.NEWSEARCH){
+                list.addFilter(searchString!!,filteredOut)
+            }
+
+        }
+
+
+        viewer=WorkSpaceViewerManager(mainPanel,this)
+        list.addObserver { listEntityEvent,clazz,method ->
+            if (listEntityEvent==listView.listEntityEvent.METHODCLICKED){
+                method?.let {viewer.currentWorkSpace()?.methodSelected(method)}
+
+            }
+            if (listEntityEvent==listView.listEntityEvent.CLASSCLICKED){
+                clazz?.let {viewer.currentWorkSpace()?.classSelected(clazz)}
+
+            }
+        }
+
+
         loadProject.addSelectionListener(loadProjectListener(shell,model,viewer))
 
-        //DEBUG BUTTON START
-        debugButton.text="debug"
-        debugButton.addSelectionListener(object : SelectionAdapter() {
-            override fun widgetSelected(e: SelectionEvent) {
-                println("DEBUG BUTTON ACTIVATED")
 
-                println("DEBUG BUTTON COMPLETED")
-            }
-        })
-        //DEBUG BUTTON END
-
-        //TOGGLES START
-        javardiseToggle=Button(buttonBar,SWT.CHECK)
-        javardiseToggle.selection=true
-        javardiseToggle.text="Javardise"
-        javardiseToggle.addSelectionListener(object : SelectionAdapter(){
-            override fun widgetSelected(e: SelectionEvent?) {
-                viewer.currentWorkSpace()?.javardise=javardiseToggle.selection
-            }
-        })
-
-        allowDuplicates=Button(buttonBar,SWT.CHECK)
-        allowDuplicates.selection=false
-        allowDuplicates.text="Allow Duplicates"
-        allowDuplicates.addSelectionListener(object : SelectionAdapter(){
-            override fun widgetSelected(e: SelectionEvent?) {
-                viewer.currentWorkSpace()?.allowDuplicate=allowDuplicates.selection
-            }
-        })
-        //TOGGLES END
-
-        mainPanel.setWeights(*listOf<Int>(1,4).toIntArray())
+        mainPanel.setWeights(*listOf<Int>(1,5).toIntArray())
         shell.maximized=true
 
     }
     internal fun initToggles(viewer: WorkSpaceViewerManager){
-        viewer.currentWorkSpace()?.javardise=javardiseToggle?.selection?:true
-        viewer.currentWorkSpace()?.allowDuplicate=allowDuplicates?.selection?:false
+        //viewer.currentWorkSpace()?.isDocumentation=documentationButton?.selection?:false
+        //viewer.currentWorkSpace()?.allowDuplicate=allowDuplicates?.selection?:false
+
     }
 
-    internal fun initWorkSpaceMenuFromMap(workSpaceOptions: kotlin.collections.Map<String, Boolean>,workSpaceViewerManager: WorkSpaceViewerManager){
+    internal fun initWorkSpaceMenuFromMap(workSpaceOptions: kotlin.collections.Map<String, KClass<WorkSpace>>,workSpaceViewerManager: WorkSpaceViewerManager){
         for (s in workSpaceOptions){
             val item=MenuItem(workSpaceMenu,SWT.PUSH)
             item.text=s.key
-            item.addSelectionListener(workSpaceOptionSelected(workSpaceViewerManager,s.value))
+            item.addSelectionListener(object :SelectionListener{
+                override fun widgetSelected(p0: SelectionEvent?) {
+                    val ws=workSpaceViewerManager.openWorkSpace(s.value)
+                    ws.projSelected(list.getPckgs())
+                }
+                override fun widgetDefaultSelected(p0: SelectionEvent?) {
+                }
+            })
         }
     }
     fun open() {
-        //shell.pack()
         shell.open()
         while (!shell.isDisposed) {
             if (!display.readAndDispatch()) display.sleep()
@@ -125,10 +125,6 @@ class QuintalDJV2 {
         model.stopThreads()
     }
 
-    fun methodSelected(model:BodyDeclaration<*>){
-        //println(viewer.currentWorkSpace())
-        viewer.currentWorkSpace()?.methodSelected(model as MethodDeclaration)
-    }
 
     internal class loadProjectListener(val shell:Shell,val fileManager:FileManager,val viewer: WorkSpaceViewerManager):SelectionListener{
         override fun widgetSelected(p0: SelectionEvent?) {
@@ -152,12 +148,6 @@ class QuintalDJV2 {
         override fun widgetDefaultSelected(p0: SelectionEvent?) {}
     }
 
-    internal class workSpaceOptionSelected(val view:WorkSpaceViewerManager,val option:Boolean):SelectionListener{
-        override fun widgetSelected(p0: SelectionEvent?) {
-            view.workSpaceOptionSelected(option)
-        }
-        override fun widgetDefaultSelected(p0: SelectionEvent?) {}
-    }
 }
 
 

@@ -1,3 +1,4 @@
+import com.github.javaparser.*
 import com.github.javaparser.ast.CompilationUnit
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
 import org.junit.jupiter.api.AfterAll
