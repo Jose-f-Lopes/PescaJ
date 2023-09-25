@@ -3,6 +3,7 @@ import com.github.javaparser.ast.CompilationUnit
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
 import com.github.javaparser.ast.body.TypeDeclaration
 import com.github.javaparser.ast.nodeTypes.NodeWithJavadoc
+import com.github.javaparser.symbolsolver.JavaSymbolSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver
@@ -35,7 +36,9 @@ internal fun parserFromFile(path:String,fileManager:FileManager):Pair<List<Pckg>
     file.walk(FileWalkDirection.TOP_DOWN).forEach {file->
         file.listFiles()?.let {
             if (it.filter { it.name.endsWith(".java") }.isNotEmpty()) {
-                val newpckg=Pckg(file)
+                var name=(file.absolutePath.toString()).split("src\\").last()
+                name=name.replace("\\",".")
+                val newpckg=Pckg(file,name)
                 if (newpckg.javaClasses.isNotEmpty()){
                     list.add(newpckg)
                 }
@@ -50,10 +53,13 @@ internal fun parserFromFile(path:String,fileManager:FileManager):Pair<List<Pckg>
 private fun buildSolver(proj:File):CombinedTypeSolver{
     val solver = CombinedTypeSolver()
     solver.add(ReflectionTypeSolver())
+
     proj.walkTopDown().filter { (it.listFiles()?.filter { it.name.endsWith(".java") })?.isNotEmpty()?:false}.forEach {
 
         solver.add(JavaParserTypeSolver(it))
     }
+    val symbolSolver = JavaSymbolSolver(solver)
+    StaticJavaParser.getParserConfiguration().setSymbolResolver(symbolSolver)
     return solver
 }
 
@@ -108,11 +114,12 @@ internal class FileWatcher(val watcher:WatchService,val fileManager: FileManager
     }
 }
 
-class Pckg(pckg:File){
+class Pckg(pckg:File,uptoHere:String){
     val documentation:File?
     val docComUnit:CompilationUnit?
     val javaClasses= mutableListOf<CompilationUnit>()
     val name:String
+    val treeName=uptoHere
 
     init {
         pckg.listFiles()?.let {
@@ -122,6 +129,7 @@ class Pckg(pckg:File){
             }
         }
         name=pckg.nameWithoutExtension
+        println(treeName)
         documentation=pckg.listFiles()?.firstOrNull{it.name=="package-info.java"}
         if (documentation!=null){
             docComUnit=StaticJavaParser.parse(documentation)

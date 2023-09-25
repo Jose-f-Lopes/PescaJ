@@ -156,7 +156,8 @@ internal class CodeExplorerWorkSpace(override val parent:WorkSpaceViewerManager,
 
     init {
         tabItem = CTabItem(parent.getComposite() as CTabFolder, SWT.NULL or SWT.CLOSE)
-        tabItem.text = "WorkSpace $counter"
+        tabItem.text = "Workspace $counter"
+        tabItem.image=Image(Display.getDefault(),"ImagesAndIcons\\codeIcon.png")
         tabItem.addDisposeListener {
             parent.removeFromRegister(this)
         }
@@ -230,7 +231,8 @@ internal class PackageDocWorkSpace(override val parent:WorkSpaceViewerManager, v
 
     init {
         tabItem = CTabItem(parent.getComposite() as CTabFolder, SWT.NULL or SWT.CLOSE)
-        tabItem.text = "WorkSpace $counter"
+        tabItem.text = "Workspace $counter"
+        tabItem.image=Image(Display.getDefault(),"ImagesAndIcons\\bars2.png")
         tabItem.addDisposeListener {
             parent.removeFromRegister(this)
         }
@@ -326,7 +328,8 @@ internal class clazzDocWorkSpace(override val parent:WorkSpaceViewerManager, val
 
     init {
         tabItem = CTabItem(parent.getComposite() as CTabFolder, SWT.NULL or SWT.CLOSE)
-        tabItem.text = "WorkSpace $counter"
+        tabItem.text = "Workspace $counter"
+        tabItem.image=Image(Display.getDefault(),"ImagesAndIcons\\bars2.png")
         tabItem.addDisposeListener {
             parent.removeFromRegister(this)
         }
@@ -347,7 +350,7 @@ internal class clazzDocWorkSpace(override val parent:WorkSpaceViewerManager, val
     }
 
     override fun pckgSelected(pckg: Pckg) {
-        tabItem.text="Package: "+pckg.name
+        tabItem.text=pckg.treeName+" Documentation"
         for(clazz in pckg.getTypeDeclaration()){
             ClazzListElement(workSpace,clazz as ClassOrInterfaceDeclaration,parent)
         }
@@ -440,6 +443,7 @@ internal class methodDocWorkSpace(override val parent:WorkSpaceViewerManager, va
     init {
         tabItem = CTabItem(parent.getComposite() as CTabFolder, SWT.NULL or SWT.CLOSE)
         tabItem.text = "WorkSpace $counter"
+        tabItem.image=Image(Display.getDefault(),"ImagesAndIcons\\bars2.png")
         tabItem.addDisposeListener {
             parent.removeFromRegister(this)
         }
