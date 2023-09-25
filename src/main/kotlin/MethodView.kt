@@ -12,6 +12,7 @@ import com.github.javaparser.javadoc.JavadocBlockTag
 import com.github.javaparser.javadoc.description.JavadocDescription
 import com.github.javaparser.javadoc.description.JavadocDescriptionElement
 import com.github.javaparser.javadoc.description.JavadocSnippet
+import org.eclipse.jface.wizard.WizardDialog
 import org.eclipse.swt.SWT
 import org.eclipse.swt.browser.Browser
 import org.eclipse.swt.events.*
@@ -30,7 +31,7 @@ import pt.iscte.javardise.external.scrollable
 import pt.iscte.javardise.widgets.members.MethodWidget
 import kotlin.reflect.KClass
 
-internal interface MethodView:IObservable<(MethodView.EventType,MethodCallExpr)->Unit>,CustomComposite{
+interface MethodView:IObservable<(MethodView.EventType,MethodCallExpr)->Unit>,CustomComposite{
     val parent:Composite
     val model:MethodDeclaration
     override val observers: MutableList<(EventType, MethodCallExpr) -> Unit>
@@ -128,8 +129,10 @@ internal class JavardiseView(override val parent: Composite, override val model:
         showDoc.text = "Show Documentation"
         showDoc.addSelectionListener(object : SelectionAdapter() {
             override fun widgetSelected(e: SelectionEvent?) {
-                MyDialogDoc(Display.getDefault().activeShell,model,classView.controller).open()
+                //val modal=MyDialog(Display.getDefault().activeShell)
+                val wizard = MyPage(Display.getDefault(),model,classView.controller)
             }
+
         })
         parent.menu = menu
     }
@@ -172,7 +175,13 @@ internal class methodDocListView(val parent: Composite, val model: MethodDeclara
         val data = GridData()
         data.widthHint = 125
         name.layoutData = data
-        val description=docView.descriptionWidget(myComposite,model.javadoc.get().description,this)
+        val description:docView.descriptionWidget
+        if (model.hasJavaDocComment()){
+            description=docView.descriptionWidget(myComposite,model.javadoc?.get()?.description,this)
+        }else{
+            description=docView.descriptionWidget(myComposite,null,this)
+        }
+
 
         //description.layoutData=GridData(GridData.FILL_HORIZONTAL)
 //        if(model.hasJavaDocComment()){
@@ -273,7 +282,7 @@ internal class docView(
         showCode.text = "Show Code"
         showCode.addSelectionListener(object : SelectionAdapter() {
             override fun widgetSelected(e: SelectionEvent?) {
-                MyDialogCode(Display.getDefault().activeShell,model,classView.controller).open()
+                //MyDialogCode(Display.getDefault().activeShell,model,classView.controller).open()
             }
         })
         val openInNew=MenuItem(menu,SWT.PUSH)
@@ -288,8 +297,8 @@ internal class docView(
         openInExisting.text="Open in existing WorkSpace"
         openInExisting.addSelectionListener(object : SelectionAdapter() {
             override fun widgetSelected(e: SelectionEvent?) {
-                val dialog=OpenOptions(Display.getDefault().activeShell,model,classView.controller.parent)
-                dialog.open()
+                //val dialog=OpenOptions(Display.getDefault().activeShell,model,classView.controller.parent)
+                //dialog.open()
 
             }
         })
@@ -531,7 +540,11 @@ internal class docView(
         }
 
         internal fun toTag():JavadocBlockTag{
-            return JavadocBlockTag(myType,description.text)
+            if (blockTagCluster.tagTypesNames.values()[myType.ordinal].hasName){
+                return JavadocBlockTag(myType,name!!.text+" "+description.text)
+            }else{
+                return JavadocBlockTag(myType,description.text)
+            }
         }
 
 
@@ -539,7 +552,7 @@ internal class docView(
 
 
 
-    internal class descriptionWidget(parent:Composite,description:JavadocDescription,val controler:JavaDocController,limitedSize:Boolean=false):CustomComposite{
+    internal class descriptionWidget(parent:Composite,var description:JavadocDescription?,val controler:JavaDocController,limitedSize:Boolean=false):CustomComposite{
 
         val myComposite=Composite(parent,SWT.NONE)
         var content:Text
@@ -572,7 +585,10 @@ internal class docView(
                 }
 
             })
-            update(description)
+            if (description==null){
+                description=JavadocDescription(mutableListOf(JavadocDescriptionElement { "emptyDescription" }))
+            }
+            update(description!!)
 
         }
 

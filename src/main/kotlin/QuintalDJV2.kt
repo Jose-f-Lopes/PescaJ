@@ -23,9 +23,9 @@ class QuintalDJV2 {
     val workSpaceMenu:Menu
     private val list:listView
     init {
-        shell.text = "Pesca-J"
+        shell.text = "PescaJ"
         shell.layout=FillLayout()
-        shell.image= Image(display,"ImagesAndIcons\\icon.png")
+        shell.image= Image(display,"ImagesAndIcons\\hook.png")
 
 
         // nao esquecer layouts nos paineis (caso contrario nao se ve nada)
@@ -43,7 +43,7 @@ class QuintalDJV2 {
         loadProject.text="&Load Project"
 
         val workSpaceMenuHeader=MenuItem (menuBar,SWT.CASCADE)
-        workSpaceMenuHeader.text="&Add WorkSpace"
+        workSpaceMenuHeader.text="&Add Workspace"
         workSpaceMenu=Menu(shell,SWT.DROP_DOWN)
         workSpaceMenuHeader.menu=workSpaceMenu
 

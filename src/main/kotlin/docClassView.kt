@@ -34,11 +34,11 @@ internal class DocClassView(parent:Composite, clazz:ClassOrInterfaceDeclaration,
                 iterator.remove()
                 item.getComposite().dispose()
             }
-            clazz.methods.filter { method->!(event.map { it.filterFun(method) }.contains(true)) }.forEach {
+            clazz.methods.filter { method->!(event.map { it.filterFun(method) }.contains(true)) }.sortedBy { it.nameAsString }.forEach {
                 val methodView=docView(bodyComposite,it,this)
             }
         }
-        clazz.methods.forEach {
+        clazz.methods.sortedBy { it.nameAsString }.forEach {
             //val methodView=docView(bodyComposite,it,this)
             methodDocListView(bodyComposite,it,this)
         }

@@ -39,10 +39,12 @@ class javaParserUtil {
                     println(e2.message)
                 }
             }
+            println("contains method: "+contains)
             return contains
         }
 
         fun expressionToDeclaration(expr:MethodCallExpr,solver: CombinedTypeSolver):MethodDeclaration?{
+            //expr.
             try {
                 val jpf = JavaParserFacade.get(solver).solve(expr)
                 if (jpf.isSolved && jpf.correspondingDeclaration is JavaParserMethodDeclaration) {

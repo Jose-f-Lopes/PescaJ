@@ -8,6 +8,7 @@ import com.github.javaparser.ast.expr.SimpleName
 import com.github.javaparser.ast.nodeTypes.NodeWithDeclaration
 import com.github.javaparser.ast.observer.ObservableProperty
 import javassist.Loader.Simple
+import org.eclipse.jface.layout.TreeColumnLayout
 import org.eclipse.swt.SWT
 import org.eclipse.swt.events.MouseEvent
 import org.eclipse.swt.events.MouseListener
@@ -36,10 +37,15 @@ internal class listView(val model:FileManager,parent:Composite):CustomComposite,
 
     init {
         tree =Tree(parent,SWT.BORDER)
+        val layout=TreeColumnLayout()
+        //tree!!.layout=layout
         root=TreeItem(tree as Tree,SWT.DROP_DOWN)
+        root!!.text=" "
+        root!!.font= Font(Display.getDefault(), FontData("Courier New",10,SWT.BOLD))
 
         model.addObserver { event, fileManager, fileparser ->
             if (event == EventType.PROJECTLOADED) {
+                root!!.text="java"
                 buildTree(FilterManager("", mutableListOf<FilterOptions>()))
             }
         }
@@ -61,7 +67,7 @@ internal class listView(val model:FileManager,parent:Composite):CustomComposite,
         (tree as Tree).setRedraw(false)
 
 
-        model.javaPackages.filter {filterManager.pckgObeysFilter(it)}.forEach {
+        model.javaPackages.filter {filterManager.pckgObeysFilter(it)}.sortedBy { it.name }.forEach {
             val pckgElement=PckageListElement(it,this,filterManager)
         }
         root!!.expanded=true
@@ -81,7 +87,7 @@ internal class listView(val model:FileManager,parent:Composite):CustomComposite,
                     }
                     if (element is listTypeElement){
                         println("class clicked")
-                        notifyObservers { it(listEntityEvent.CLASSCLICKED,element.type.toClassOrInterfaceDeclaration().get(),null) }
+                        //notifyObservers { it(listEntityEvent.CLASSCLICKED,element.type.toClassOrInterfaceDeclaration().get(),null) }
                     }
                     if (element is PckageListElement){
                         //todo
@@ -148,7 +154,7 @@ class listTypeElement(val type:TypeDeclaration<*>,val parent:listElement,filterM
         type.observeProperty<Name>(ObservableProperty.NAME){
             treeItem.text=it.toString()
         }
-        type.methods.filter { filterManager.mthdObeysFilter(it)}.forEach {
+        type.methods.filter { filterManager.mthdObeysFilter(it)}.sortedBy { it.nameAsString }.forEach {
             val method=listMethodElement(it,this)
         }
         treeItem.expanded=true
@@ -185,8 +191,10 @@ class listMethodElement(val body:BodyDeclaration<*>,val parent:listElement):list
         treeItem.text
         treeItem.font= Font(Display.getDefault(), FontData("Courier New",10,SWT.BOLD))
         body.observeProperty<SimpleName>(ObservableProperty.NAME){
-            it?.let {declaration.updateName(it) }
-            treeItem.text=declaration.lightToString()
+            if(!treeItem.isDisposed) {
+                it?.let { declaration.updateName(it) }
+                treeItem.text = declaration.lightToString()
+            }
         }
         treeItem.expanded=true
         registerInTree(this)
@@ -212,7 +220,7 @@ class PckageListElement(val pckg:Pckg,val parent:listElement,val filterManager: 
 
         treeItem.text=pckg.name
         treeItem.font= Font(Display.getDefault(), FontData("Courier New",10,SWT.BOLD))
-        pckg.getTypeDeclaration().filter { filterManager.clssgObeysFilter(it) }.forEach {
+        pckg.getTypeDeclaration().filter { filterManager.clssgObeysFilter(it) }.sortedBy { it.nameAsString }.forEach {
             val clazz=listTypeElement(it,this, filterManager)
         }
 
